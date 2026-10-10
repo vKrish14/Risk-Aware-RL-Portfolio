@@ -1,0 +1,7 @@
+risky_assets:
+  - SPY
+  - QQQ
+  - GLD
+  - IEF
+  - VNQ
+cash_symbol: CASH

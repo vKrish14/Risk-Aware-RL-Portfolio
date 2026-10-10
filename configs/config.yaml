@@ -1,0 +1,21 @@
+project:
+  name: Risk-Aware RL Portfolio Management
+  seed: 42
+  initial_capital: 100000
+  timezone: America/New_York
+  frequency: daily
+  provider: yfinance
+  start_date: '2015-01-01'
+  end_date_inclusive: null # null means latest completed trading date at runtime
+  provider_end_date_exclusive: true
+  train: {start: '2015-01-01', end: '2021-12-31'}
+  validation: {start: '2022-01-01', end: '2023-12-31'}
+  test: {start: '2024-01-01', end: null}
+portfolio:
+  long_only: true
+  leverage: false
+  transaction_cost_rate: 0.001
+  turnover_definition: half_l1_target_weight_change
+  risk_free_annual: 0.02
+  synthetic_cash_annual_return: 0.02
+  cash_day_count: 252

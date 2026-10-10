@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+
+# Generated data, models, and results
+/data/raw/*
+/data/processed/*
+/data/cache/*
+/models/checkpoints/*
+/models/metadata/*
+/results/figures/*
+/results/tables/*
+/results/backtests/*
+/results/reports/*
+!/data/**/README.md
+!/models/**/README.md
+!/results/**/README.md
+!/results/figures/equity_curves.png
+!/results/figures/drawdowns.png
+!/results/tables/test_metrics.csv
+!/results/backtests/test_report.json
+
+# Tooling and OS
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.DS_Store
+Thumbs.db

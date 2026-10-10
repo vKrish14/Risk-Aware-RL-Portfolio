@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "risk-aware-rl-portfolio"
+version = "0.1.0"
+description = "Educational research system for risk-aware RL portfolio allocation"
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+dynamic = ["dependencies"]
+
+[tool.setuptools]
+package-dir = {"" = "."}
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
