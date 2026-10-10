@@ -81,9 +81,17 @@ def model_targets(
     current[returns.columns.get_loc(cash_column)] = 1.0
     nav, peak, previous_return = 1.0, 1.0, 0.0
     history: list[float] = []
+    state_width = int(model.observation_space.shape[0] - len(features.columns) - len(returns.columns))
     for i, (date, feature) in enumerate(features.iterrows()):
         vol = float(np.std(history[-20:])) if history else 0.0
-        obs = np.concatenate((feature.to_numpy(dtype=float), current, [nav, previous_return, max(0, 1 - nav / peak), vol])).astype(np.float32)
+        state = [nav, previous_return, max(0, 1 - nav / peak), vol]
+        if state_width == 5:
+            past = np.asarray(history[-60:], dtype=float)
+            cvar = max(0.0, -float(past[past <= np.quantile(past, .05)].mean())) if past.size else 0.0
+            state.append(cvar)
+        elif state_width != 4:
+            raise ValueError(f"Unsupported portfolio state size: {state_width}.")
+        obs = np.concatenate((feature.to_numpy(dtype=float), current, state)).astype(np.float32)
         action, _ = model.predict(obs, deterministic=True)
         desired = logits_to_weights(action)
         target[i] = desired

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import date
+from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -16,6 +17,7 @@ class PortfolioPredictRequest(BaseModel):
     previous_return: float = 0.0
     drawdown: float = Field(default=0.0, ge=0, lt=1)
     volatility: float = Field(default=0.0, ge=0)
+    cvar95_loss: float = Field(default=0.0, ge=0, description="Average loss in the worst 5% of recent daily returns, supplied for the tail-risk-aware model.")
 
 
 class PortfolioPredictResponse(BaseModel):
@@ -36,12 +38,23 @@ class SimulationStep(BaseModel):
 class PortfolioSimulateRequest(BaseModel):
     initial_capital: float = Field(default=100_000.0, gt=0)
     transaction_cost_rate: float = Field(default=0.001, ge=0, lt=1)
+    risk_free_annual: float = Field(default=0.02, ge=0, lt=1)
     steps: list[SimulationStep] = Field(min_length=2)
 
 
 class BacktestRunRequest(BaseModel):
     start_date: date
     end_date: date
+    strategy: Literal[
+        "risk_aware",
+        "cvar_aware",
+        "return_net_cost",
+        "return_only",
+        "equal_weight",
+        "buy_hold",
+        "momentum",
+        "minimum_variance",
+    ] = "risk_aware"
 
     @model_validator(mode="after")
     def valid_range(self):

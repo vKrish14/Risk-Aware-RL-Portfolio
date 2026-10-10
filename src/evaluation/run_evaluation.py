@@ -38,7 +38,7 @@ def evaluate_test_period(root: str | Path = ".") -> pd.DataFrame:
         "risk_free_annual": portfolio["risk_free_annual"],
     }
     results: dict[str, dict[str, object]] = {}
-    for variant in ("risk_aware", "return_net_cost", "return_only"):
+    for variant in ("cvar_aware", "risk_aware", "return_net_cost", "return_only"):
         base = project / "models/checkpoints" / variant
         best = base / "best/best_model.zip"
         model_path = best if best.exists() else base / "final_model.zip"

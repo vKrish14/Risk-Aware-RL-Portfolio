@@ -1,53 +1,35 @@
-"""Saved model backtest endpoints."""
-from fastapi import APIRouter, HTTPException, Request
+"""Interactive access to the saved, held-out multi-strategy comparison."""
+from fastapi import APIRouter, HTTPException
 
 from api.schemas import BacktestRunRequest
-from src.evaluation.metrics import calculate_metrics
+from src.evaluation.saved_report import (
+    compare_saved_strategies,
+    load_saved_report,
+    report_availability,
+    saved_strategy_series,
+)
+
 
 router = APIRouter(prefix="/backtest")
 
 
 @router.get("/availability")
-def availability(request: Request):
-    service = request.app.state.service
-    if service is None:
-        raise HTTPException(status_code=503, detail="Trained model is unavailable.")
+def availability():
     try:
-        return service.test_availability()
-    except FileNotFoundError as exc:
+        return report_availability(load_saved_report())
+    except (FileNotFoundError, ValueError, KeyError) as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @router.post("/run")
-def run_backtest(payload: BacktestRunRequest, request: Request):
-    service = request.app.state.service
-    if service is None:
-        raise HTTPException(status_code=503, detail="Trained model is unavailable.")
+def run_backtest(payload: BacktestRunRequest):
+    """Slice any saved strategy and compare all strategies over identical dates."""
     try:
-        result = service.run_saved_test()
-    except (ValueError, FileNotFoundError) as exc:
+        report = load_saved_report()
+        result = saved_strategy_series(payload.strategy, payload.start_date, payload.end_date, report=report)
+        comparison = compare_saved_strategies(payload.start_date, payload.end_date, report=report)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except (FileNotFoundError, KeyError) as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
-    equity = result["equity"].loc[str(payload.start_date):str(payload.end_date)]
-    if equity.empty:
-        raise HTTPException(status_code=422, detail="Requested range has no available saved test observations.")
-    prior = result["equity"].loc[result["equity"].index < equity.index.min()]
-    previous = prior.iloc[-1] if not prior.empty else service.config["project"]["initial_capital"]
-    net_returns = equity.pct_change()
-    net_returns.iloc[0] = equity.iloc[0] / previous - 1
-    turnover = result["turnover"].reindex(equity.index)
-    costs = result["costs"].reindex(equity.index)
-    metrics = calculate_metrics(
-        net_returns, turnover=turnover, transaction_cost_amount=costs,
-        initial_capital=float(previous), risk_free_annual=service.config["portfolio"]["risk_free_annual"],
-    )
-    weights = result["weights"].loc[equity.index]
-    try:
-        comparison = service.saved_comparison(payload.start_date, payload.end_date)
-    except FileNotFoundError:
-        comparison = {}
-    return {
-        "metrics": metrics,
-        "comparison": comparison,
-        "equity": {d.strftime("%Y-%m-%d"): float(v) for d, v in equity.items()},
-        "weights": {d.strftime("%Y-%m-%d"): row.to_dict() for d, row in weights.iterrows()},
-    }
+    return {**result, "comparison": comparison}

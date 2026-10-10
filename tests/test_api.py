@@ -56,4 +56,17 @@ def test_invalid_backtest_dates_receive_validation_error() -> None:
     assert response.status_code == 422
 
 
+def test_market_search_and_quote_endpoints(monkeypatch) -> None:
+    import api.routes.market as market
+    monkeypatch.setattr(market, "search_symbols", lambda query: [{"symbol": "AAPL", "name": "Apple Inc.", "exchange": "NASDAQ", "kind": "Equity"}])
+    monkeypatch.setattr(market, "get_quote", lambda symbol: {"symbol": symbol, "price": 100.0, "retrieved_at_utc": "2026-01-01T00:00:00+00:00"})
+    client = TestClient(app)
+    result = client.get("/market/search", params={"q": "Apple"})
+    assert result.status_code == 200
+    assert result.json()["results"][0]["symbol"] == "AAPL"
+    quote = client.get("/market/quote", params={"symbol": "AAPL"})
+    assert quote.status_code == 200
+    assert quote.json()["price"] == 100.0
+
+
 import pytest

@@ -1,0 +1,15 @@
+# Runtime-only requirements for the Hugging Face Docker Space.
+numpy>=1.26,<3
+pandas>=2.2,<4
+yfinance>=0.2.65,<2
+gymnasium>=1.0,<2
+stable-baselines3>=2.7,<3
+fastapi>=0.115,<1
+uvicorn[standard]>=0.34,<1
+streamlit>=1.40,<2
+plotly>=5.24,<7
+pydantic>=2.10,<3
+PyYAML>=6,<7
+scipy>=1.13,<2
+matplotlib>=3.9,<4
+httpx>=0.27,<1

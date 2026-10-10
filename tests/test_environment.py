@@ -56,4 +56,15 @@ def test_action_logits_are_clipped_to_declared_box_before_softmax() -> None:
     np.testing.assert_allclose(logits_to_weights(np.array([-100, 100])), logits_to_weights(np.array([-1, 1])))
 
 
+def test_cvar_policy_observes_only_past_rolling_tail_loss() -> None:
+    env = make_env()
+    env = PortfolioEnv(env.features, env.asset_returns, reward_variant="cvar_aware")
+    observation, _ = env.reset(seed=42)
+    assert observation.shape == env.observation_space.shape
+    assert observation[-1] == 0
+    observation, _, _, _, info = env.step(np.zeros(env.action_space.shape, dtype=np.float32))
+    assert observation[-1] == info["cvar95_loss"]
+    assert info["cvar95_loss"] >= 0
+
+
 import pytest

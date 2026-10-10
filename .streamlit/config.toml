@@ -1,0 +1,13 @@
+[theme]
+primaryColor = "#0f766e"
+backgroundColor = "#f7f8f4"
+secondaryBackgroundColor = "#ffffff"
+textColor = "#24394b"
+font = "sans serif"
+chartCategoricalColors = ["#0f766e", "#147a65", "#b47722", "#426c9a", "#8b6fa8", "#bd4c50"]
+chartSequentialColors = ["#f0f7f5", "#e0efeb", "#cce5de", "#b3d8ce", "#8fc7b9", "#66b19f", "#439889", "#2b8176", "#1b6b63", "#0f514c"]
+
+[theme.sidebar]
+backgroundColor = "#102a43"
+secondaryBackgroundColor = "#173b50"
+textColor = "#edf4f8"

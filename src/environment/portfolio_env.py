@@ -71,7 +71,8 @@ class PortfolioEnv(gym.Env):
         self._feature_values = self.features.to_numpy(dtype=np.float32)
         self._returns = self.asset_returns.to_numpy(dtype=np.float64)
         self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(len(self.asset_names),), dtype=np.float32)
-        observation_size = self._feature_values.shape[1] + len(self.asset_names) + 4
+        self.include_cvar_state = reward_variant == "cvar_aware"
+        observation_size = self._feature_values.shape[1] + len(self.asset_names) + 4 + int(self.include_cvar_state)
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(observation_size,), dtype=np.float32)
         self._index = 0
         self._nav = self.initial_capital
@@ -79,18 +80,30 @@ class PortfolioEnv(gym.Env):
         self._weights = np.zeros(len(self.asset_names), dtype=float)
         self._weights[self._cash_index] = 1.0
         self._previous_return = 0.0
-        self._return_history: deque[float] = deque(maxlen=volatility_window)
+        self._return_history: deque[float] = deque(maxlen=max(volatility_window, 60))
         self._last_info: dict[str, object] = {}
 
     def _observation(self) -> np.ndarray:
-        vol = float(np.std(self._return_history, ddof=0)) if self._return_history else 0.0
+        vol = float(np.std(list(self._return_history)[-self.volatility_window :], ddof=0)) if self._return_history else 0.0
         drawdown = max(0.0, 1.0 - self._nav / self._peak)
+        cvar95_loss = self._cvar95_loss()
+        portfolio_state = [self._nav / self.initial_capital, self._previous_return, drawdown, vol]
+        if self.include_cvar_state:
+            portfolio_state.append(cvar95_loss)
         obs = np.concatenate((
             self._feature_values[self._index],
             self._weights.astype(np.float32),
-            np.array([self._nav / self.initial_capital, self._previous_return, drawdown, vol], dtype=np.float32),
+            np.asarray(portfolio_state, dtype=np.float32),
         )).astype(np.float32)
         return obs
+
+    def _cvar95_loss(self) -> float:
+        """Estimate recent 95% conditional loss from at most 60 past returns."""
+        if not self._return_history:
+            return 0.0
+        values = np.asarray(self._return_history, dtype=float)
+        cutoff = float(np.quantile(values, 0.05))
+        return max(0.0, -float(values[values <= cutoff].mean()))
 
     def reset(self, *, seed: int | None = None, options: dict | None = None) -> tuple[np.ndarray, dict]:
         """Reset at the first feature row and allocate all initial capital to cash."""
@@ -126,7 +139,7 @@ class PortfolioEnv(gym.Env):
         self._return_history.append(net_return)
         self._index += 1
         drawdown = max(0.0, 1.0 - self._nav / self._peak)
-        volatility = float(np.std(self._return_history, ddof=0))
+        volatility = float(np.std(list(self._return_history)[-self.volatility_window :], ddof=0))
         reward = calculate_reward(
             self.reward_variant,
             gross_return=gross_return,
@@ -134,6 +147,7 @@ class PortfolioEnv(gym.Env):
             cost_fraction=cost_fraction,
             volatility=volatility,
             drawdown=drawdown,
+            cvar95_loss=self._cvar95_loss(),
             **self.reward_params,
         )
         terminated = self._nav <= 0 or not np.isfinite(self._nav)
@@ -150,6 +164,7 @@ class PortfolioEnv(gym.Env):
             "transaction_cost_amount": old_nav * cost_fraction,
             "drawdown": drawdown,
             "volatility": volatility,
+            "cvar95_loss": self._cvar95_loss(),
         }
         self._last_info = info
         return self._observation(), float(reward), bool(terminated), bool(truncated), info

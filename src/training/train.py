@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 import pandas as pd
+import numpy as np
 import yaml
 from stable_baselines3.common.callbacks import EvalCallback
 from stable_baselines3.common.monitor import Monitor
@@ -78,6 +79,18 @@ def train(root: str | Path = ".", *, timesteps: int | None = None, reward_varian
     model.learn(total_timesteps=steps, callback=callback, progress_bar=False)
     final_path = checkpoint_dir / "final_model"
     model.save(str(final_path))
+    best_model_path = checkpoint_dir / "best/best_model.zip"
+    evaluation_path = log_dir / "evaluations.npz"
+    validation_summary = {}
+    if evaluation_path.exists():
+        with np.load(evaluation_path) as evaluation:
+            mean_rewards = evaluation["results"].mean(axis=1)
+            best_index = int(np.argmax(mean_rewards))
+            validation_summary = {
+                "best_validation_timestep": int(evaluation["timesteps"][best_index]),
+                "best_validation_mean_reward": float(mean_rewards[best_index]),
+                "final_validation_mean_reward": float(mean_rewards[-1]),
+            }
     metadata = {
         "algorithm": "Stable-Baselines3 PPO",
         "policy": ppo.get("policy", "MlpPolicy"),
@@ -85,15 +98,22 @@ def train(root: str | Path = ".", *, timesteps: int | None = None, reward_varian
         "requested_timesteps": steps,
         "actual_timesteps": model.num_timesteps,
         "reward_variant": reward_variant,
+        "portfolio_state": ["nav_fraction", "previous_net_return", "drawdown", "trailing_20d_volatility"] + (["rolling_60d_cvar95_loss"] if reward_variant == "cvar_aware" else []),
         "reward_parameters": {
             "transaction_cost_rate": env_config["transaction_cost_rate"],
             "transaction_cost_penalty": 1.0,
             "volatility_penalty": 0.1,
             "drawdown_penalty": 0.1,
+            "cvar95_window": 60 if reward_variant == "cvar_aware" else None,
+            "cvar_confidence": 0.95 if reward_variant == "cvar_aware" else None,
+            "cvar_daily_budget": 0.02 if reward_variant == "cvar_aware" else None,
+            "cvar_penalty": 5.0 if reward_variant == "cvar_aware" else None,
             "reward_scale": 1.0,
         },
         "data_sha256": json.loads((project / "data/processed/data_manifest.json").read_text(encoding="utf-8"))["data_sha256"],
         "selected_using": "validation mean reward",
+        "selected_checkpoint": "best/best_model.zip" if best_model_path.exists() else "final_model.zip",
+        **validation_summary,
         "train_first": splits["train"].index.min().date().isoformat(),
         "train_last": splits["train"].index.max().date().isoformat(),
         "validation_first": splits["validation"].index.min().date().isoformat(),
@@ -112,9 +132,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", default=".")
     parser.add_argument("--timesteps", type=int)
-    parser.add_argument("--reward", choices=("return_only", "return_net_cost", "risk_aware", "all"), default="risk_aware")
+    parser.add_argument("--reward", choices=("return_only", "return_net_cost", "risk_aware", "cvar_aware", "all"), default="risk_aware")
     args = parser.parse_args()
-    variants = ("return_only", "return_net_cost", "risk_aware") if args.reward == "all" else (args.reward,)
+    variants = ("return_only", "return_net_cost", "risk_aware", "cvar_aware") if args.reward == "all" else (args.reward,)
     for variant in variants:
         print(train(args.root, timesteps=args.timesteps, reward_variant=variant))
 

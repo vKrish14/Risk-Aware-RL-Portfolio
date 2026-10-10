@@ -27,9 +27,13 @@ venv/
 !/results/backtests/test_report.json
 
 # Tooling and OS
+AGENTS.md
+IMPLEMENTATION_PLAN.md
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+/build/hf-space/
+/build/hf-space-ready/
 .coverage
 htmlcov/
 .DS_Store

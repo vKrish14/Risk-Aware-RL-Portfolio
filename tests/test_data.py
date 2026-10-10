@@ -9,6 +9,7 @@ from zoneinfo import ZoneInfo
 from src.data.cleaner import align_common_dates, validate_prices
 from src.data.downloader import load_or_download
 from src.data.downloader import _latest_completed_end
+from src.data.ohlc import latest_completed_market_date
 from src.data.splitter import DateWindow, split_chronologically
 
 
@@ -77,6 +78,12 @@ def test_latest_completed_provider_bound_uses_new_york_close() -> None:
     assert _latest_completed_end(before_close).isoformat() == "2024-01-05"
     assert _latest_completed_end(after_close).isoformat() == "2024-01-06"
     assert _latest_completed_end(weekend).isoformat() == "2024-01-06"
+
+
+def test_chart_latest_date_is_a_completed_weekday(monkeypatch) -> None:
+    import src.data.ohlc as ohlc
+    monkeypatch.setattr(ohlc, "_latest_completed_end", lambda: pd.Timestamp("2024-01-07").date())
+    assert latest_completed_market_date().isoformat() == "2024-01-05"
 
 
 def test_overlapping_windows_are_rejected() -> None:

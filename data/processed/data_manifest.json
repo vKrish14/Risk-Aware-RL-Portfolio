@@ -1,0 +1,64 @@
+{
+  "provider": "Yahoo Finance via yfinance",
+  "tickers": [
+    "SPY",
+    "QQQ",
+    "GLD",
+    "IEF",
+    "VNQ"
+  ],
+  "start_inclusive": "2015-01-01",
+  "end_exclusive": "2026-10-10",
+  "price_field": "Close with auto_adjust=True",
+  "downloaded_at_utc": "2026-10-10T07:40:12.837890+00:00",
+  "first_observation": "2015-01-02",
+  "last_observation": "2026-10-09",
+  "rows": 2960,
+  "data_sha256": "8f83162d54709cea2e17ce57307f1fd6dbf377eac92eed487f14c0ef67c2d34c",
+  "pipeline_generated_at_utc": "2026-10-10T07:58:39.391887+00:00",
+  "pipeline_yfinance_version": "1.7.0",
+  "cache_hit": true,
+  "split_windows_inclusive": {
+    "train": {
+      "start": "2015-01-01",
+      "end": "2021-12-31"
+    },
+    "validation": {
+      "start": "2022-01-01",
+      "end": "2023-12-31"
+    },
+    "test": {
+      "start": "2024-01-01",
+      "end": null
+    }
+  },
+  "alignment": {
+    "input_rows": 2960,
+    "output_rows": 2960,
+    "dropped_dates": [],
+    "missing_by_asset": {
+      "SPY": 0,
+      "QQQ": 0,
+      "GLD": 0,
+      "IEF": 0,
+      "VNQ": 0
+    }
+  },
+  "splits": {
+    "train": {
+      "rows": 1763,
+      "first": "2015-01-02",
+      "last": "2021-12-31"
+    },
+    "validation": {
+      "rows": 501,
+      "first": "2022-01-03",
+      "last": "2023-12-29"
+    },
+    "test": {
+      "rows": 696,
+      "first": "2024-01-02",
+      "last": "2026-10-09"
+    }
+  }
+}

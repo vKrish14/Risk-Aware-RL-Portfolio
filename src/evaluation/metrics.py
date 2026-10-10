@@ -37,6 +37,8 @@ def calculate_metrics(
     drawdowns = equity / peak - 1
     max_drawdown = float(drawdowns.min())
     calmar = float(annualized / abs(max_drawdown)) if max_drawdown < 0 else float("nan")
+    left_tail_cutoff = float(np.quantile(values, 0.05))
+    cvar95_loss = max(0.0, -float(values[values <= left_tail_cutoff].mean()))
     metrics = {
         "total_return": total_return,
         "annualized_return": annualized,
@@ -44,6 +46,7 @@ def calculate_metrics(
         "sharpe_ratio": sharpe,
         "sortino_ratio": sortino,
         "max_drawdown": max_drawdown,
+        "daily_cvar_95_loss": cvar95_loss,
         "calmar_ratio": calmar,
         "turnover": float(turnover.sum()),
         "cumulative_transaction_costs": float(transaction_cost_amount.sum()),

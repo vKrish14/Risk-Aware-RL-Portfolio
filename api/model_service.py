@@ -25,7 +25,8 @@ class ModelService:
             candidate = Path(configured)
             self.model_path = candidate if candidate.is_absolute() else self.root / candidate
         else:
-            base = self.root / "models/checkpoints/risk_aware"
+            candidates = (self.root / "models/checkpoints/cvar_aware", self.root / "models/checkpoints/risk_aware")
+            base = next((path for path in candidates if (path / "best/best_model.zip").exists() or (path / "final_model.zip").exists()), candidates[-1])
             best = base / "best/best_model.zip"
             self.model_path = best if best.exists() else base / "final_model.zip"
         if not self.model_path.is_file():
@@ -57,6 +58,11 @@ class ModelService:
         if set(weights) != set(self.asset_names) or any(v < 0 for v in weights.values()) or abs(sum(weights.values()) - 1) > 1e-6:
             raise ValueError("current_weights must name every asset, be nonnegative, and sum to one.")
         state = [request.portfolio_value / self.config["project"]["initial_capital"], request.previous_return, request.drawdown, request.volatility]
+        state_width = int(self.model.observation_space.shape[0] - len(expected) - len(self.asset_names))
+        if state_width == 5:
+            state.append(request.cvar95_loss)
+        elif state_width != 4:
+            raise ValueError(f"Unsupported model portfolio-state size: {state_width}.")
         observation = pd.Series([weights.get(name, 0.0) for name in self.asset_names])
         import numpy as np
         obs = np.r_[scaled, observation.to_numpy(dtype=float), state].astype(np.float32)
